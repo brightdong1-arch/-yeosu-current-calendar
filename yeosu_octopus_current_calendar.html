@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#082f49">
+<title>여수 돌문어 조류달력</title>
+<style>
+:root{--navy:#082f49;--blue:#0e7490;--sky:#e0f2fe;--ink:#102a43;--muted:#627d98;--line:#d9e5ee;--bg:#f3f8fb;--card:#fff;--green:#0f766e;--orange:#c2410c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+header{background:linear-gradient(135deg,#082f49,#0e7490);color:white;padding:22px 18px 20px}
+h1{font-size:21px;margin:0 0 5px}header p{margin:0;font-size:12px;opacity:.85}
+main{max-width:760px;margin:auto;padding:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 3px 12px #082f4909}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+button{border:0;border-radius:11px;padding:10px 13px;background:var(--navy);color:white;font-weight:650;font-size:14px}
+button.secondary{background:#e7f0f6;color:var(--navy)}button:disabled{opacity:.45}
+.month{font-size:19px;font-weight:800}
+.sub{font-size:12px;color:var(--muted);line-height:1.5;margin-top:8px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.dow{text-align:center;font-size:11px;color:var(--muted);padding:5px 0;font-weight:700}
+.day{min-height:83px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:6px 4px;text-align:left;overflow:hidden;color:var(--ink)}
+.day.blank{background:transparent;border-color:transparent}
+.day.today{outline:2px solid var(--blue)}
+.day .num{font-size:12px;font-weight:800}
+.day .speed{font-size:14px;font-weight:850;margin-top:8px;color:var(--blue)}
+.day .dir{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day .moon{font-size:10px;margin-top:3px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.detailTitle{font-weight:800;font-size:16px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.metric{background:#f1f7fa;border-radius:12px;padding:10px}
+.metric b{display:block;font-size:18px;color:var(--navy)}
+.metric span{font-size:11px;color:var(--muted)}
+input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font-size:14px;margin:6px 0}
+label{font-size:12px;font-weight:700;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}
+.status{font-size:12px;color:var(--muted);margin-top:8px;white-space:pre-wrap}
+.notice{font-size:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:10px;color:#9a3412;line-height:1.5}
+a{color:#0369a1}
+@media(max-width:390px){.day{min-height:75px;padding:5px 2px}.day .speed{font-size:11px}.day .dir{font-size:9px}.metrics{gap:5px}.metric{padding:8px}}
+</style>
+</head>
+<body>
+<header><h1>🐙 여수 돌문어 조류달력</h1><p>국립해양조사원 조류예보 · 여수해만 15LTC10</p></header>
+<main>
+<section class="panel">
+ <div class="toolbar">
+  <button class="secondary" id="prev">‹ 이전</button>
+  <div class="month" id="monthLabel">불러오는 중</div>
+  <button class="secondary" id="next">다음 ›</button>
+ </div>
+ <div class="sub">날짜별 평균 조류 강도를 %로 표시합니다. 날짜를 누르면 시간대별 방향·유속·강도 %를 확인할 수 있어요.</div>
+</section>
+<section class="panel">
+ <div class="grid" id="calendar"></div>
+ <div class="legend">
+  <span><i class="dot" style="background:#99d6c9"></i>약한 조류</span>
+  <span><i class="dot" style="background:#60a5fa"></i>보통</span>
+  <span><i class="dot" style="background:#f59e0b"></i>강한 조류</span>
+  <span>🌑 달 위상은 참고용</span>
+ </div>
+ <div class="status" id="loadStatus">API 인증키를 입력하면 공식 예보를 불러옵니다.</div>
+</section>
+<section class="panel" id="detail">
+ <div class="detailTitle">날짜를 선택하세요</div>
+ <div class="sub">강도 %와 공식 원본 유속(cm/s)을 함께 표시합니다. 기준은 연중 고정 30 cm/s = 100%입니다.</div>
+</section>
+<section class="panel">
+ <div class="detailTitle">공식 API 연결</div>
+ <p class="sub">공공데이터포털에서 발급한 조류예보(시계열) 일반 인증키를 입력하세요. 키는 이 브라우저 안에만 저장됩니다.</p>
+ <label for="apiKey">서비스 인증키</label>
+ <input id="apiKey" type="password" autocomplete="off" placeholder="발급받은 일반 인증키 붙여넣기">
+ <div class="row"><button id="save">키 저장 및 이번 달 불러오기</button><button class="secondary" id="clear">키 삭제</button></div>
+ <div class="status" id="keyStatus"></div>
+</section>
+<div class="notice">
+ <b>강도 % 계산 기준</b><br>
+ 공식 API가 제공하는 유속(cm/s)을 연중 고정 기준인 30 cm/s = 100%로 환산해 표시합니다. 예: 5 cm/s = 17%, 15 cm/s = 50%, 30 cm/s 이상 = 100%. 월별 최대 유속에 따라 기준이 바뀌지 않습니다. 이 %는 물고기가 물 확률이나 입질 확률이 아니라, 정해 둔 기준 유속 대비 상대적인 조류 강도입니다. 원본 유속도 함께 표시합니다. 조석(만조·간조) 시각과 물때 번호는 별도 데이터가 필요합니다.
+</div>
+<p class="sub">출처: 해양수산부 국립해양조사원 조류예보(시계열) · <a href="https://www.data.go.kr/data/15156024/openapi.do" target="_blank" rel="noopener">공공데이터포털 API 안내</a></p>
+</main>
+<script>
+const API='https://apis.data.go.kr/1192136/crntFcstTime/GetCrntFcstTimeApiService';
+const CODE='15LTC10', $=id=>document.getElementById(id);
+let view=new Date(); view.setDate(1);
+let records={}, selected=null;
+const pad=n=>String(n).padStart(2,'0');
+const dateKey=d=>`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+const fmtDate=d=>`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`;
+function moonPhase(date){
+ const syn=29.530588853, known=Date.UTC(2000,0,6,18,14);
+ const days=(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate())-known)/86400000;
+ const age=((days%syn)+syn)%syn, p=age/syn;
+ if(p<.035||p>.965)return '🌑'; if(p<.22)return '🌒'; if(p<.28)return '🌓'; if(p<.47)return '🌔'; if(p<.53)return '🌕'; if(p<.72)return '🌖'; if(p<.78)return '🌗'; return '🌘';
+}
+// 연중 고정 기준: 30 cm/s = 100% (월별 최대값에 따라 변하지 않음)
+function strength(v){return Math.max(0,Math.min(100,Math.round(v/30*100)))}
+function intensity(p){if(p<34)return '#99d6c9';if(p<67)return '#60a5fa';return '#f59e0b'}
+function render(){
+ const y=view.getFullYear(),m=view.getMonth();
+ $('monthLabel').textContent=`${y}년 ${m+1}월`;
+ const first=new Date(y,m,1), count=new Date(y,m+1,0).getDate();
+ const cells=['일','월','화','수','목','금','토'].map(x=>`<div class="dow">${x}</div>`);
+ for(let i=0;i<first.getDay();i++)cells.push('<div class="day blank"></div>');
+ for(let n=1;n<=count;n++){
+  const d=new Date(y,m,n), key=dateKey(d), arr=records[key]||[];
+  const avg=arr.length?arr.reduce((s,x)=>s+x.speed,0)/arr.length:null;
+  const max=arr.length?Math.max(...arr.map(x=>x.speed)):null;
+  const pct=avg===null?null:strength(avg);
+  const today=new Date(), isToday=d.toDateString()===today.toDateString();
+  cells.push(`<button class="day ${isToday?'today':''}" data-date="${key}" style="background:${pct===null?'#fff':intensity(pct)+'22'}">
+   <div class="num">${n}</div>
+   <div class="speed">${pct===null?'·':pct+'%'}</div>
+   <div class="dir">${arr.length?arr[Math.floor(arr.length/2)].dir:'예보 없음'}</div>
+   <div class="moon">${moonPhase(d)}</div></button>`);
+ }
+ $('calendar').innerHTML=cells.join('');
+ document.querySelectorAll('[data-date]').forEach(b=>b.addEventListener('click',()=>showDetail(b.dataset.date)));
+}
+function pickItems(json){
+ let body=json?.response?.body||json?.body||json;
+ let it=body?.items?.item??body?.items??[];
+ if(!Array.isArray(it))it=it?[it]:[];
+ return it.map(x=>{
+  const dt=x.predcDt||x.obsrvnDt||x.predictedDateTime||'';
+  const speed=Number(x.crsp);
+  return {time:String(dt).slice(11,16),dir:x.crdir??'-',speed};
+ }).filter(x=>Number.isFinite(x.speed));
+}
+async function fetchDay(key,keyValue){
+ const url=new URL(API);
+ url.searchParams.set('serviceKey',keyValue);
+ url.searchParams.set('numOfRows','300');
+ url.searchParams.set('pageNo','1');
+ url.searchParams.set('type','json');
+ url.searchParams.set('obsCode',CODE);
+ url.searchParams.set('reqDate',key);
+ url.searchParams.set('min','60');
+ const res=await fetch(url.toString());
+ if(!res.ok)throw new Error(`HTTP ${res.status}`);
+ const json=await res.json();
+ const code=json?.response?.header?.resultCode??json?.header?.resultCode;
+ if(code && !['00','0'].includes(String(code)))throw new Error(json?.response?.header?.resultMsg||json?.header?.resultMsg||`API 오류 ${code}`);
+ return pickItems(json);
+}
+async function loadMonth(){
+ const keyValue=localStorage.getItem('yeosuCurrentApiKey');
+ if(!keyValue){$('loadStatus').textContent='인증키를 입력하면 공식 조류예보를 불러옵니다.';return}
+ const y=view.getFullYear(),m=view.getMonth(),days=new Date(y,m+1,0).getDate();
+ $('loadStatus').textContent=`${y}년 ${m+1}월 예보 요청 중…`;
+ let ok=0,fail=0;
+ // API는 요청일자별 조회이므로 날짜 단위로 순차 호출
+ for(let n=1;n<=days;n++){
+  const d=new Date(y,m,n), k=dateKey(d);
+  try{records[k]=await fetchDay(k,keyValue);ok++}catch(e){fail++;records[k]=[];if(fail===1)$('loadStatus').textContent=`응답 확인 중: ${e.message}`}
+  render();
+ }
+ $('loadStatus').textContent=`불러오기 완료: ${ok}일 성공 / ${fail}일 실패. 데이터가 없는 날짜는 예보 없음으로 표시됩니다.`;
+ if(selected)showDetail(selected);
+}
+function showDetail(key){
+ selected=key;
+ const y=Number(key.slice(0,4)),m=Number(key.slice(4,6))-1,dn=Number(key.slice(6,8));
+ const d=new Date(y,m,dn), arr=records[key]||[];
+ const avg=arr.length?arr.reduce((s,x)=>s+x.speed,0)/arr.length:null;
+ const max=arr.length?Math.max(...arr.map(x=>x.speed)):null;
+ let html=`<div class="detailTitle">${fmtDate(d)} ${moonPhase(d)}</div>`;
+ if(!arr.length){html+='<p class="sub">표시할 예보 데이터가 없습니다. 인증키, API 승인 상태 또는 해당 날짜의 제공 여부를 확인하세요.</p>'}
+ else{
+  html+=`<div class="metrics"><div class="metric"><b>${strength(avg)}%</b><span>평균 조류 강도</span></div><div class="metric"><b>${avg.toFixed(1)}</b><span>평균 유속 cm/s</span></div><div class="metric"><b>${max.toFixed(1)}</b><span>최대 유속 cm/s</span></div></div>`;
+  html+='<div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px">';
+  arr.forEach(x=>html+=`<div class="metric"><b style="font-size:14px">${x.time||'시각 미상'}</b><span>${x.dir} · ${strength(x.speed)}% · ${x.speed.toFixed(1)} cm/s</span></div>`);
+  html+='</div>';
+ }
+ $('detail').innerHTML=html;
+}
+$('prev').onclick=()=>{view.setMonth(view.getMonth()-1);selected=null;render();loadMonth()};
+$('next').onclick=()=>{view.setMonth(view.getMonth()+1);selected=null;render();loadMonth()};
+$('save').onclick=()=>{const k=$('apiKey').value.trim();if(!k){$('keyStatus').textContent='인증키를 입력해 주세요.';return}localStorage.setItem('yeosuCurrentApiKey',k);$('keyStatus').textContent='이 브라우저에 저장했습니다.';loadMonth()};
+$('clear').onclick=()=>{localStorage.removeItem('yeosuCurrentApiKey');$('apiKey').value='';$('keyStatus').textContent='저장된 키를 삭제했습니다.';$('loadStatus').textContent='인증키가 삭제되었습니다.'};
+if(localStorage.getItem('yeosuCurrentApiKey')){$('keyStatus').textContent='인증키가 이 브라우저에 저장되어 있습니다.'}
+render();loadMonth();
+</script>
+</body></html>
